@@ -5,7 +5,7 @@ import ra.common.messaging.MessageProducer;
 import ra.common.route.Route;
 import ra.common.service.BaseService;
 import ra.common.service.ServiceStatus;
-import ra.common.service.ServiceStatusListener;
+import ra.common.service.ServiceStatusObserver;
 import ra.util.Config;
 
 import java.util.*;
@@ -26,8 +26,8 @@ public class MailDropService extends BaseService {
 
     protected Properties config;
 
-    public MailDropService(MessageProducer producer, ServiceStatusListener listener) {
-        super(producer, listener);
+    public MailDropService(MessageProducer producer, ServiceStatusObserver observer) {
+        super(producer, observer);
     }
 
     @Override
