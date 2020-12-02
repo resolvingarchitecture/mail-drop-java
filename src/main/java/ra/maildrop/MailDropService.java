@@ -30,6 +30,10 @@ public class MailDropService extends BaseService {
     protected Properties config;
     protected File mailBoxDirectory;
 
+    public MailDropService() {
+        super();
+    }
+
     public MailDropService(MessageProducer producer, ServiceStatusObserver observer) {
         super(producer, observer);
     }
