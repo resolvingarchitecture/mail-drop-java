@@ -23,6 +23,8 @@ public class MailDropService extends BaseService {
 
     public static final String OPERATION_SEND = "SEND";
     public static final String OPERATION_PICKUP = "PICKUP";
+    public static final String OPERATION_REMOVE = "REMOVE";
+    public static final String OPERATION_PICKUP_REMOVE = "PICKUP_REMOVE";
 
     public static final String RA_MAIL_DROP_CONFIG = "ra-mail-drop.config";
     public static final String RA_MAIL_DROP_DIR = "ra.maildrop.dir";
@@ -44,6 +46,12 @@ public class MailDropService extends BaseService {
         switch(r.getOperation()) {
             case OPERATION_SEND: {send(envelope);break;}
             case OPERATION_PICKUP: {pickUp(envelope);break;}
+            case OPERATION_REMOVE: {remove(envelope);break;}
+            case OPERATION_PICKUP_REMOVE: {
+                if(pickUp(envelope))
+                    remove(envelope);
+                break;
+            }
             default: {deadLetter(envelope);break;}
         }
     }
@@ -68,10 +76,6 @@ public class MailDropService extends BaseService {
 
     private boolean pickUp(Envelope e) {
         // Pickup messages for peer/client
-        boolean remove = false;
-        if(e.getValue("ra.maildrop.remove")!=null && "true".equals(e.getValue("ra.maildrop.remove"))) {
-            remove = true;
-        }
         File mail = new File(mailBoxDirectory, e.getId());
         if(!mail.exists()) {
             e.addErrorMessage("Envelope does not exist.");
@@ -79,28 +83,38 @@ public class MailDropService extends BaseService {
         }
         if(!mail.canRead()) {
             e.addErrorMessage("Unable to read persisted envelope.");
-            return true;
+            return false;
         }
         byte[] bytes;
         try {
             bytes = FileUtil.readFile(mail.getAbsolutePath());
         } catch (IOException ex) {
             LOG.warning(ex.getLocalizedMessage());
+            e.addErrorMessage("Failure occurred loading envelope.");
             return false;
         }
         String json = new String(bytes);
         e.fromJSON(json);
-        if(remove && !mail.delete()) {
-            e.addErrorMessage("Unable to delete persisted envelope.");
-        }
         return true;
+    }
+
+    private void remove(Envelope e) {
+        // Remove message for peer/client
+        File mail = new File(mailBoxDirectory, e.getId());
+        if(mail.exists() && !mail.delete()) {
+            e.addErrorMessage("Unable to delete persisted envelope.");
+            LOG.warning("MailDrop remove failed; deadlettering envelope: "+e.getId());
+            deadLetter(e);
+        } else {
+            LOG.info("Removed envelope: "+e.getId());
+        }
     }
 
     @Override
     public boolean start(Properties p) {
         super.start(p);
-        LOG.info("Initializing...");
-        updateStatus(ServiceStatus.INITIALIZING);
+        LOG.info("Starting...");
+        updateStatus(ServiceStatus.STARTING);
         try {
             config = Config.loadFromClasspath(RA_MAIL_DROP_CONFIG, p, false);
         } catch (Exception e) {
@@ -113,7 +127,7 @@ public class MailDropService extends BaseService {
             LOG.severe("Unable to create message hold directory.");
             return false;
         }
-        updateStatus(ServiceStatus.STARTING);
+        updateStatus(ServiceStatus.RUNNING);
         return true;
     }
 

@@ -4,13 +4,9 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import ra.common.DLC;
 import ra.common.Envelope;
-import ra.common.network.NetworkBuilderStrategy;
 
 import java.io.File;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Properties;
 import java.util.logging.Logger;
 
@@ -56,10 +52,8 @@ public class MailDropServiceTest {
         Assert.assertTrue("1234".equals(ePickup.getValue("test")));
 
         Envelope ePickupRemove = Envelope.documentFactory(id);
-        ePickupRemove.addRoute(MailDropService.class, MailDropService.OPERATION_PICKUP);
-        ePickupRemove.addNVP("ra.maildrop.remove","true");
+        ePickupRemove.addRoute(MailDropService.class, MailDropService.OPERATION_REMOVE);
         service.handleDocument(ePickupRemove);
-        Assert.assertTrue("1234".equals(ePickup.getValue("test")));
         Assert.assertFalse(new File(service.mailBoxDirectory,id).exists());
 
     }
