@@ -23,8 +23,8 @@ public class MailDropService extends BaseService {
 
     public static final String OPERATION_SEND = "SEND";
     public static final String OPERATION_PICKUP = "PICKUP";
-    public static final String OPERATION_REMOVE = "REMOVE";
-    public static final String OPERATION_PICKUP_REMOVE = "PICKUP_REMOVE";
+    public static final String OPERATION_CLEAN = "CLEAN";
+    public static final String OPERATION_PICKUP_CLEAN = "PICKUP_CLEAN";
 
     public static final String RA_MAIL_DROP_CONFIG = "ra-mail-drop.config";
     public static final String RA_MAIL_DROP_DIR = "ra.maildrop.dir";
@@ -46,10 +46,10 @@ public class MailDropService extends BaseService {
         switch(r.getOperation()) {
             case OPERATION_SEND: {send(envelope);break;}
             case OPERATION_PICKUP: {pickUp(envelope);break;}
-            case OPERATION_REMOVE: {remove(envelope);break;}
-            case OPERATION_PICKUP_REMOVE: {
+            case OPERATION_CLEAN: {clean(envelope);break;}
+            case OPERATION_PICKUP_CLEAN: {
                 if(pickUp(envelope))
-                    remove(envelope);
+                    clean(envelope);
                 break;
             }
             default: {deadLetter(envelope);break;}
@@ -58,55 +58,79 @@ public class MailDropService extends BaseService {
 
     @Override
     public boolean send(Envelope e) {
+        if(e.getClient()==null || e.getClient().isEmpty()) {
+            e.addErrorMessage("Client is required to be set.");
+            LOG.warning("Client is required to be set.");
+            return false;
+        }
+        File clientMailbox = new File(mailBoxDirectory+"/"+e.getClient());
+        if(!clientMailbox.exists() && !clientMailbox.mkdir()) {
+            LOG.warning("Unable to create client mailbox directory.");
+            return false;
+        }
         // Persist message into mail box
-        File envFile = new File(mailBoxDirectory, e.getId());
+        File msgFile = new File(clientMailbox, e.getId());
         try {
-            if(!envFile.createNewFile()) {
-                LOG.warning("Unable to create file to persist Envelope waiting on network");
+            if(!msgFile.createNewFile()) {
+                LOG.warning("Unable to create msg file to persist Envelope.");
                 return false;
             }
         } catch (IOException ioException) {
             LOG.warning(ioException.getLocalizedMessage());
             return false;
         }
-        FileUtil.writeFile(e.toJSON().getBytes(), envFile.getAbsolutePath());
+        FileUtil.writeFile(e.toJSON().getBytes(), msgFile.getAbsolutePath());
         LOG.info("Persisted envelope (id="+e.getId()+") to file.");
         return true;
     }
 
     private boolean pickUp(Envelope e) {
         // Pickup messages for peer/client
-        File mail = new File(mailBoxDirectory, e.getId());
-        if(!mail.exists()) {
-            e.addErrorMessage("Envelope does not exist.");
+        if(e.getClient()==null || e.getClient().isEmpty()) {
+            e.addErrorMessage("Client is required to be set.");
+            LOG.warning("Client is required to be set.");
+            return false;
+        }
+        File clientMailBox = new File(mailBoxDirectory+"/"+e.getClient());
+        if(!clientMailBox.exists()) {
+            e.addErrorMessage("Client mailbox does not exist.");
             return true;
         }
-        if(!mail.canRead()) {
-            e.addErrorMessage("Unable to read persisted envelope.");
+        if(!clientMailBox.canRead()) {
+            e.addErrorMessage("Unable to read client mailbox.");
             return false;
         }
-        byte[] bytes;
-        try {
-            bytes = FileUtil.readFile(mail.getAbsolutePath());
-        } catch (IOException ex) {
-            LOG.warning(ex.getLocalizedMessage());
-            e.addErrorMessage("Failure occurred loading envelope.");
-            return false;
+        File[] messageFiles = clientMailBox.listFiles();
+        List<Envelope> mail = new ArrayList<>();
+        for(File msgFile : messageFiles) {
+            try {
+                Envelope envelope = Envelope.documentFactory();
+                envelope.fromJSON(new String(FileUtil.readFile(msgFile.getAbsolutePath())));
+                mail.add(envelope);
+            } catch (IOException ex) {
+                LOG.warning(ex.getLocalizedMessage());
+                e.addErrorMessage("Failure occurred loading envelope from file: "+msgFile.getAbsolutePath());
+            }
         }
-        String json = new String(bytes);
-        e.fromJSON(json);
+        e.addNVP("ra.maildrop.Mail", mail);
         return true;
     }
 
-    private void remove(Envelope e) {
-        // Remove message for peer/client
-        File mail = new File(mailBoxDirectory, e.getId());
-        if(mail.exists() && !mail.delete()) {
-            e.addErrorMessage("Unable to delete persisted envelope.");
-            LOG.warning("MailDrop remove failed; deadlettering envelope: "+e.getId());
-            deadLetter(e);
-        } else {
-            LOG.info("Removed envelope: "+e.getId());
+    private void clean(Envelope e) {
+        // Remove all messages for peer/client
+        if(e.getClient()==null || e.getClient().isEmpty()) {
+            e.addErrorMessage("Client is required to be set.");
+            LOG.warning("Client is required to be set.");
+            return;
+        }
+        File clientMailBox = new File(mailBoxDirectory+"/"+e.getClient());
+        if(clientMailBox.exists() && clientMailBox.canWrite()) {
+            File[] messageFiles = clientMailBox.listFiles();
+            if(messageFiles!=null) {
+                for (File msgFile : messageFiles) {
+                    msgFile.delete();
+                }
+            }
         }
     }
 
