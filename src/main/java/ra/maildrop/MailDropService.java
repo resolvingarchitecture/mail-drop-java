@@ -152,6 +152,7 @@ public class MailDropService extends BaseService {
             return false;
         }
         updateStatus(ServiceStatus.RUNNING);
+        LOG.info("Started.");
         return true;
     }
 
