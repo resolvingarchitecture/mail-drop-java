@@ -43,7 +43,7 @@ public class MailDropServiceTest {
         Envelope eSend = Envelope.documentFactory();
         eSend.setClient("client1");
         String id = eSend.getId();
-        eSend.addRoute(MailDropService.class, MailDropService.OPERATION_SEND);
+        eSend.addRoute(MailDropService.class, MailDropService.OPERATION_DROPOFF);
         eSend.addNVP("test","1234");
         service.handleDocument(eSend);
         Assert.assertTrue(new File(service.mailBoxDirectory+"/client1",id).exists());

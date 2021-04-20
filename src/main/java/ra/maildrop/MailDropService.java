@@ -21,7 +21,7 @@ public class MailDropService extends BaseService {
 
     private static final Logger LOG = Logger.getLogger(MailDropService.class.getName());
 
-    public static final String OPERATION_SEND = "SEND";
+    public static final String OPERATION_DROPOFF = "DROPOFF";
     public static final String OPERATION_PICKUP = "PICKUP";
     public static final String OPERATION_CLEAN = "CLEAN";
     public static final String OPERATION_PICKUP_CLEAN = "PICKUP_CLEAN";
@@ -44,7 +44,7 @@ public class MailDropService extends BaseService {
     public void handleDocument(Envelope envelope) {
         Route r = envelope.getDynamicRoutingSlip().getCurrentRoute();
         switch(r.getOperation()) {
-            case OPERATION_SEND: {send(envelope);break;}
+            case OPERATION_DROPOFF: {dropOff(envelope);break;}
             case OPERATION_PICKUP: {pickUp(envelope);break;}
             case OPERATION_CLEAN: {clean(envelope);break;}
             case OPERATION_PICKUP_CLEAN: {
@@ -56,8 +56,7 @@ public class MailDropService extends BaseService {
         }
     }
 
-    @Override
-    public boolean send(Envelope e) {
+    private boolean dropOff(Envelope e) {
         if(e.getClient()==null || e.getClient().isEmpty()) {
             e.addErrorMessage("Client is required to be set.");
             LOG.warning("Client is required to be set.");
