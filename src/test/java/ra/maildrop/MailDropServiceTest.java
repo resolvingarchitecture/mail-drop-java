@@ -45,12 +45,14 @@ public class MailDropServiceTest {
         String id = eSend.getId();
         eSend.addRoute(MailDropService.class, MailDropService.OPERATION_DROPOFF);
         eSend.addNVP("test","1234");
+        eSend.ratchet();
         service.handleDocument(eSend);
         Assert.assertTrue(new File(service.mailBoxDirectory+"/client1",id).exists());
 
         Envelope ePickup = Envelope.documentFactory(id);
         ePickup.setClient("client1");
         ePickup.addRoute(MailDropService.class, MailDropService.OPERATION_PICKUP);
+        ePickup.ratchet();
         service.handleDocument(ePickup);
         List<Envelope> msgs = (List<Envelope>)ePickup.getValue("ra.maildrop.Mail");
         Assert.assertTrue(msgs!=null && msgs.size()>0);
@@ -59,6 +61,7 @@ public class MailDropServiceTest {
         Envelope ePickupClean = Envelope.documentFactory(id);
         ePickupClean.setClient("client1");
         ePickupClean.addRoute(MailDropService.class, MailDropService.OPERATION_CLEAN);
+        ePickupClean.ratchet();
         service.handleDocument(ePickupClean);
         Assert.assertFalse(new File(service.mailBoxDirectory+"/client1",id).exists());
 

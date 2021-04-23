@@ -42,7 +42,7 @@ public class MailDropService extends BaseService {
 
     @Override
     public void handleDocument(Envelope envelope) {
-        Route r = envelope.getDynamicRoutingSlip().getCurrentRoute();
+        Route r = envelope.getRoute();
         switch(r.getOperation()) {
             case OPERATION_DROPOFF: {dropOff(envelope);break;}
             case OPERATION_PICKUP: {pickUp(envelope);break;}
@@ -91,8 +91,8 @@ public class MailDropService extends BaseService {
             return false;
         }
         File clientMailBox = new File(mailBoxDirectory+"/"+e.getClient());
-        if(!clientMailBox.exists()) {
-            e.addErrorMessage("Client mailbox does not exist.");
+        if(!clientMailBox.exists() && !clientMailBox.mkdir()) {
+            e.addErrorMessage("Client mailbox does not exist and unable to create.");
             return true;
         }
         if(!clientMailBox.canRead()) {
