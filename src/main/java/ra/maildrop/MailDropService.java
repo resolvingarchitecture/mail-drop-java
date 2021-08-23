@@ -6,8 +6,8 @@ import ra.common.route.Route;
 import ra.common.service.BaseService;
 import ra.common.service.ServiceStatus;
 import ra.common.service.ServiceStatusObserver;
-import ra.util.Config;
-import ra.util.FileUtil;
+import ra.common.Config;
+import ra.common.FileUtil;
 
 import java.io.File;
 import java.io.IOException;
